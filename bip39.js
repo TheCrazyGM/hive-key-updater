@@ -52,73 +52,29 @@ const BIP39 = (function () {
     const entropy = new Uint8Array(byteCount);
     getSecureRandomValues(entropy);
 
-    // Track used words to avoid repetition
-    const usedWords = new Set();
-    const result = [];
-
-    // Create a seeded random generator to get better distribution
-    function getRandomInt(max) {
-      // Get 4 bytes of randomness each time
-      const buffer = new Uint8Array(4);
-      getSecureRandomValues(buffer);
-
-      // Convert to 32-bit integer
-      const value = new DataView(buffer.buffer).getUint32(0, true);
-      return value % max;
-    }
-
-    // Generate each word, ensuring no repeats
-    let attemptsLimit = 100; // Safety limit to prevent infinite loops
-    for (let i = 0; i < wordCount; i++) {
-      let wordIndex;
-      let attempts = 0;
-      let selectedWord;
-
-      // Keep trying until we get a non-repeating word
-      do {
-        // Get a fully random index for this word
-        wordIndex = getRandomInt(wordlist.length);
-        selectedWord = wordlist[wordIndex];
-        attempts++;
-
-        // If we've tried too many times, reset the used words to prevent getting stuck
-        if (attempts > attemptsLimit) {
-          // Only clear the last few words to still maintain some non-repetition
-          if (result.length > 3) {
-            const recentWords = new Set(result.slice(-3));
-            usedWords.clear();
-            recentWords.forEach((word) => usedWords.add(word));
-          }
-          break;
-        }
-      } while (
-        // Prevent immediate repetition of the same word
-        (result.length > 0 && result[result.length - 1] === selectedWord) ||
-        // Prevent repetition of recently used words if possible
-        (usedWords.size < wordlist.length / 2 && usedWords.has(selectedWord))
-      );
-
-      // Add the selected word
-      result.push(selectedWord);
-      usedWords.add(selectedWord);
-
-      // Limit the size of usedWords to prevent memory issues with very long phrases
-      if (usedWords.size > wordlist.length / 2) {
-        // Keep only the most recent words
-        usedWords.clear();
-        const recentWords = result.slice(-Math.min(result.length, 10));
-        recentWords.forEach((word) => usedWords.add(word));
+    // Shuffle the wordlist using Fisher-Yates (Durstenfeld shuffle)
+    function shuffleArray(array) {
+      const shuffled = [...array]; // Create a copy to avoid modifying the original
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
+      return shuffled;
     }
 
-    return result.join(" ");
+    // Create a shuffled copy of the wordlist
+    const shuffledWords = shuffleArray(wordlist);
+
+    // Select the first 'wordCount' words from the shuffled list
+    const mnemonicWords = shuffledWords.slice(0, wordCount);
+    return mnemonicWords.join(" ");
   }
 
   // Return public methods
   return {
     generateMnemonic: generateMnemonic,
   };
-})();
+}());
 
 // Make BIP39 available globally
 window.BIP39 = BIP39;
