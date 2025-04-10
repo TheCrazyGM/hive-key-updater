@@ -74,7 +74,7 @@ const BIP39 = (function () {
   return {
     generateMnemonic: generateMnemonic,
   };
-}());
+})();
 
 // Make BIP39 available globally
 window.BIP39 = BIP39;
